@@ -4,9 +4,11 @@
 - Lazy: no
 - Shared: yes
 - Abstract: no
+- Autowired: no
 - File: `/path/to/file`
 - Factory Service: `factory.service`
 - Factory Method: `get`
+- Call: `setMailer`
 - Tag: `tag1`
     - Attr1: val1
     - Attr2: val2

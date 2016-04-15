@@ -9,8 +9,8 @@ CHANGELOG
 2.8.0
 -----
 
- * deprecated `getKey()` of the `AnonymousToken`, `RememberMeToken` and `AbstractRememberMeServices` classes
-   in favor of `getSecret()`.
+ * deprecated `getKey()` of the `AnonymousToken`, `RememberMeToken`,
+   `AbstractRememberMeServices` and `DigestAuthenticationEntryPoint` classes in favor of `getSecret()`.
  * deprecated `Symfony\Component\Security\Core\Authentication\SimplePreAuthenticatorInterface`, use
    `Symfony\Component\Security\Http\Authentication\SimplePreAuthenticatorInterface` instead
  * deprecated `Symfony\Component\Security\Core\Authentication\SimpleFormAuthenticatorInterface`, use
@@ -23,6 +23,8 @@ CHANGELOG
    `Symfony\Component\Security\Core\Authorization\Voter\VoterInterface`.
  * deprecated `getSupportedAttributes()` and `getSupportedClasses()` methods of
    `Symfony\Component\Security\Core\Authorization\Voter\AbstractVoter`, use `supports()` instead.
+ * deprecated the `intention` option for all the authentication listeners,
+   use the `csrf_token_id` option instead.
 
 2.7.0
 -----

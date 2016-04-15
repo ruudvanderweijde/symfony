@@ -187,6 +187,14 @@ class MarkdownDescriptor extends Descriptor
 
         $output .= "\n".'- Abstract: '.($definition->isAbstract() ? 'yes' : 'no');
 
+        if (method_exists($definition, 'isAutowired')) {
+            $output .= "\n".'- Autowired: '.($definition->isAutowired() ? 'yes' : 'no');
+
+            foreach ($definition->getAutowiringTypes() as $autowiringType) {
+                $output .= "\n".'- Autowiring Type: `'.$autowiringType.'`';
+            }
+        }
+
         if ($definition->getFile()) {
             $output .= "\n".'- File: `'.$definition->getFile().'`';
         }
@@ -204,6 +212,11 @@ class MarkdownDescriptor extends Descriptor
             } else {
                 $output .= "\n".'- Factory Function: `'.$factory.'`';
             }
+        }
+
+        $calls = $definition->getMethodCalls();
+        foreach ($calls as $callData) {
+            $output .= "\n".'- Call: `'.$callData[0].'`';
         }
 
         if (!(isset($options['omit_tags']) && $options['omit_tags'])) {

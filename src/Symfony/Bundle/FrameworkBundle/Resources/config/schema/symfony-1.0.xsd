@@ -11,6 +11,7 @@
         <xsd:all>
             <xsd:element name="assets" type="assets" minOccurs="0" maxOccurs="1" />
             <xsd:element name="form" type="form" minOccurs="0" maxOccurs="1" />
+            <xsd:element name="csrf-protection" type="csrf_protection" minOccurs="0" maxOccurs="1" />
             <xsd:element name="esi" type="esi" minOccurs="0" maxOccurs="1" />
             <xsd:element name="fragments" type="fragments" minOccurs="0" maxOccurs="1" />
             <xsd:element name="profiler" type="profiler" minOccurs="0" maxOccurs="1" />
@@ -23,6 +24,8 @@
             <xsd:element name="annotations" type="annotations" minOccurs="0" maxOccurs="1" />
             <xsd:element name="property-access" type="property_access" minOccurs="0" maxOccurs="1" />
             <xsd:element name="serializer" type="serializer" minOccurs="0" maxOccurs="1" />
+            <xsd:element name="property-info" type="property_info" minOccurs="0" maxOccurs="1" />
+            <xsd:element name="cache" type="cache" minOccurs="0" maxOccurs="1" />
         </xsd:all>
 
         <xsd:attribute name="http-method-override" type="xsd:boolean" />
@@ -43,6 +46,10 @@
     <xsd:complexType name="form_csrf_protection">
         <xsd:attribute name="enabled" type="xsd:boolean" />
         <xsd:attribute name="field-name" type="xsd:string" />
+    </xsd:complexType>
+
+    <xsd:complexType name="csrf_protection">
+        <xsd:attribute name="enabled" type="xsd:boolean" />
     </xsd:complexType>
 
     <xsd:complexType name="esi">
@@ -120,6 +127,7 @@
         </xsd:sequence>
 
         <xsd:attribute name="base-path" type="xsd:string" />
+        <xsd:attribute name="version-strategy" type="xsd:string" />
         <xsd:attribute name="version" type="xsd:string" />
         <xsd:attribute name="version-format" type="xsd:string" />
     </xsd:complexType>
@@ -131,6 +139,7 @@
 
         <xsd:attribute name="name" type="xsd:string" use="required" />
         <xsd:attribute name="base-path" type="xsd:string" />
+        <xsd:attribute name="version-strategy" type="xsd:string" />
         <xsd:attribute name="version" type="xsd:string" />
         <xsd:attribute name="version-format" type="xsd:string" />
     </xsd:complexType>
@@ -189,5 +198,24 @@
         <xsd:attribute name="cache" type="xsd:string" />
         <xsd:attribute name="enable-annotations" type="xsd:boolean" />
         <xsd:attribute name="name-converter" type="xsd:string" />
+    </xsd:complexType>
+
+    <xsd:complexType name="property_info">
+        <xsd:attribute name="enabled" type="xsd:boolean" />
+    </xsd:complexType>
+
+    <xsd:complexType name="cache">
+        <xsd:choice minOccurs="1" maxOccurs="unbounded">
+            <xsd:element name="pool" type="cache_pool" />
+        </xsd:choice>
+    </xsd:complexType>
+
+    <xsd:complexType name="cache_pool">
+        <xsd:attribute name="name" type="xsd:string" use="required" />
+        <xsd:attribute name="adapter" type="xsd:string" />
+        <xsd:attribute name="public" type="xsd:boolean" />
+        <xsd:attribute name="default-lifetime" type="xsd:integer" />
+        <xsd:attribute name="provider" type="xsd:string" />
+        <xsd:attribute name="clearer" type="xsd:string" />
     </xsd:complexType>
 </xsd:schema>

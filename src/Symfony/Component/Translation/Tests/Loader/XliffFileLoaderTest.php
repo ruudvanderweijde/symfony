@@ -30,7 +30,7 @@ class XliffFileLoaderTest extends \PHPUnit_Framework_TestCase
 
     public function testLoadWithInternalErrorsEnabled()
     {
-        libxml_use_internal_errors(true);
+        $internalErrors = libxml_use_internal_errors(true);
 
         $this->assertSame(array(), libxml_get_errors());
 
@@ -41,6 +41,9 @@ class XliffFileLoaderTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('en', $catalogue->getLocale());
         $this->assertEquals(array(new FileResource($resource)), $catalogue->getResources());
         $this->assertSame(array(), libxml_get_errors());
+
+        libxml_clear_errors();
+        libxml_use_internal_errors($internalErrors);
     }
 
     public function testLoadWithResname()
@@ -59,9 +62,6 @@ class XliffFileLoaderTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(array('foo' => 'bar', 'extra' => 'extra', 'key' => '', 'test' => 'with'), $catalogue->all('domain1'));
     }
 
-    /**
-     * @requires extension mbstring
-     */
     public function testEncoding()
     {
         $loader = new XliffFileLoader();

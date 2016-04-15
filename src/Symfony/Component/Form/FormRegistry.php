@@ -69,10 +69,6 @@ class FormRegistry implements FormRegistryInterface
      */
     public function getType($name)
     {
-        if (!is_string($name)) {
-            throw new UnexpectedTypeException($name, 'string');
-        }
-
         if (!isset($this->types[$name])) {
             $type = null;
 
@@ -92,7 +88,7 @@ class FormRegistry implements FormRegistryInterface
                 }
             }
 
-            $this->resolveAndAddType($type);
+            $this->types[$name] = $this->resolveType($type);
         }
 
         return $this->types[$name];
@@ -106,7 +102,7 @@ class FormRegistry implements FormRegistryInterface
      *
      * @return ResolvedFormTypeInterface The resolved type.
      */
-    private function resolveAndAddType(FormTypeInterface $type)
+    private function resolveType(FormTypeInterface $type)
     {
         $typeExtensions = array();
         $parentType = $type->getParent();
@@ -119,13 +115,11 @@ class FormRegistry implements FormRegistryInterface
             );
         }
 
-        $resolvedType = $this->resolvedTypeFactory->createResolvedType(
+        return $this->resolvedTypeFactory->createResolvedType(
             $type,
             $typeExtensions,
             $parentType ? $this->getType($parentType) : null
         );
-
-        $this->types[$fqcn] = $resolvedType;
     }
 
     /**

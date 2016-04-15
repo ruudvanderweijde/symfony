@@ -11,7 +11,6 @@
 
 namespace Symfony\Component\Form\Tests\Extension\Core\Type;
 
-use Symfony\Component\Form\Form;
 use Symfony\Component\Form\Tests\Fixtures\Author;
 
 class CollectionTypeTest extends \Symfony\Component\Form\Test\TypeTestCase
@@ -19,7 +18,7 @@ class CollectionTypeTest extends \Symfony\Component\Form\Test\TypeTestCase
     public function testContainsNoChildByDefault()
     {
         $form = $this->factory->create('Symfony\Component\Form\Extension\Core\Type\CollectionType', null, array(
-            'type' => 'Symfony\Component\Form\Extension\Core\Type\TextType',
+            'entry_type' => 'Symfony\Component\Form\Extension\Core\Type\TextType',
         ));
 
         $this->assertCount(0, $form);
@@ -262,22 +261,6 @@ class CollectionTypeTest extends \Symfony\Component\Form\Test\TypeTestCase
         $this->assertSame('__test__', $form->getConfig()->getAttribute('prototype')->getName());
     }
 
-    /**
-     * @group legacy
-     */
-    public function testLegacyEntryOptions()
-    {
-        $form = $this->factory->create('Symfony\Component\Form\Extension\Core\Type\CollectionType', array(), array(
-            'type' => 'Symfony\Component\Form\Extension\Core\Type\NumberType',
-            'options' => array('attr' => array('maxlength' => '10')),
-        ));
-
-        $resolvedOptions = $form->getConfig()->getOptions();
-
-        $this->assertEquals('Symfony\Component\Form\Extension\Core\Type\NumberType', $resolvedOptions['entry_type']);
-        $this->assertEquals(array('attr' => array('maxlength' => '10'), 'block_name' => 'entry'), $resolvedOptions['entry_options']);
-    }
-
     public function testPrototypeDefaultLabel()
     {
         $form = $this->factory->create('Symfony\Component\Form\Extension\Core\Type\CollectionType', array(), array(
@@ -293,15 +276,85 @@ class CollectionTypeTest extends \Symfony\Component\Form\Test\TypeTestCase
     public function testPrototypeData()
     {
         $form = $this->factory->create('Symfony\Component\Form\Extension\Core\Type\CollectionType', array(), array(
-            'type' => 'Symfony\Component\Form\Extension\Core\Type\TextType',
             'allow_add' => true,
             'prototype' => true,
             'prototype_data' => 'foo',
+            'entry_type' => 'Symfony\Component\Form\Extension\Core\Type\TextType',
             'entry_options' => array(
                 'data' => 'bar',
+                'label' => false,
             ),
         ));
 
         $this->assertSame('foo', $form->createView()->vars['prototype']->vars['value']);
+        $this->assertFalse($form->createView()->vars['prototype']->vars['label']);
+    }
+
+    public function testPrototypeDefaultRequired()
+    {
+        $form = $this->factory->create('Symfony\Component\Form\Extension\Core\Type\CollectionType', array(), array(
+            'entry_type' => 'Symfony\Component\Form\Extension\Core\Type\FileType',
+            'allow_add' => true,
+            'prototype' => true,
+            'prototype_name' => '__test__',
+        ));
+
+        $this->assertTrue($form->createView()->vars['prototype']->vars['required']);
+    }
+
+    public function testPrototypeSetNotRequired()
+    {
+        $form = $this->factory->create('Symfony\Component\Form\Extension\Core\Type\CollectionType', array(), array(
+            'entry_type' => 'Symfony\Component\Form\Extension\Core\Type\FileType',
+            'allow_add' => true,
+            'prototype' => true,
+            'prototype_name' => '__test__',
+            'required' => false,
+        ));
+
+        $this->assertFalse($form->createView()->vars['required'], 'collection is not required');
+        $this->assertFalse($form->createView()->vars['prototype']->vars['required'], '"prototype" should not be required');
+    }
+
+    public function testPrototypeSetNotRequiredIfParentNotRequired()
+    {
+        $child = $this->factory->create('Symfony\Component\Form\Extension\Core\Type\CollectionType', array(), array(
+            'entry_type' => 'Symfony\Component\Form\Extension\Core\Type\FileType',
+            'allow_add' => true,
+            'prototype' => true,
+            'prototype_name' => '__test__',
+        ));
+
+        $parent = $this->factory->create('Symfony\Component\Form\Extension\Core\Type\FormType', array(), array(
+            'required' => false,
+        ));
+
+        $child->setParent($parent);
+        $this->assertFalse($parent->createView()->vars['required'], 'Parent is not required');
+        $this->assertFalse($child->createView()->vars['required'], 'Child is not required');
+        $this->assertFalse($child->createView()->vars['prototype']->vars['required'], '"Prototype" should not be required');
+    }
+
+    public function testPrototypeNotOverrideRequiredByEntryOptionsInFavorOfParent()
+    {
+        $child = $this->factory->create('Symfony\Component\Form\Extension\Core\Type\CollectionType', array(), array(
+            'entry_type' => 'Symfony\Component\Form\Extension\Core\Type\FileType',
+            'allow_add' => true,
+            'prototype' => true,
+            'prototype_name' => '__test__',
+            'entry_options' => array(
+                'required' => true,
+            ),
+        ));
+
+        $parent = $this->factory->create('Symfony\Component\Form\Extension\Core\Type\FormType', array(), array(
+            'required' => false,
+        ));
+
+        $child->setParent($parent);
+
+        $this->assertFalse($parent->createView()->vars['required'], 'Parent is not required');
+        $this->assertFalse($child->createView()->vars['required'], 'Child is not required');
+        $this->assertFalse($child->createView()->vars['prototype']->vars['required'], '"Prototype" should not be required');
     }
 }

@@ -23,7 +23,7 @@ class LanguageType extends AbstractType
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(array(
-            'choices' => Intl::getLanguageBundle()->getLanguageNames(),
+            'choices' => array_flip(Intl::getLanguageBundle()->getLanguageNames()),
             'choice_translation_domain' => false,
         ));
     }

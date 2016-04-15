@@ -23,7 +23,7 @@ class LocaleType extends AbstractType
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(array(
-            'choices' => Intl::getLocaleBundle()->getLocaleNames(),
+            'choices' => array_flip(Intl::getLocaleBundle()->getLocaleNames()),
             'choice_translation_domain' => false,
         ));
     }

@@ -14,14 +14,12 @@ namespace Symfony\Bundle\SecurityBundle\DependencyInjection;
 use Symfony\Bundle\SecurityBundle\DependencyInjection\Security\Factory\SecurityFactoryInterface;
 use Symfony\Bundle\SecurityBundle\DependencyInjection\Security\UserProvider\UserProviderFactoryInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
-use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\DefinitionDecorator;
 use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
-use Symfony\Component\DependencyInjection\Parameter;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Security\Core\Authorization\ExpressionLanguage;
 
@@ -99,6 +97,13 @@ class SecurityExtension extends Extension
             $this->aclLoad($config['acl'], $container);
         }
 
+        if ($container->hasParameter('kernel.debug') && $container->getParameter('kernel.debug')) {
+            $loader->load('security_debug.xml');
+
+            $definition = $container->findDefinition('security.authorization_checker');
+            $definition->replaceArgument(2, new Reference('debug.security.access.decision_manager'));
+        }
+
         // add some required classes for compilation
         $this->addClassesToCompile(array(
             'Symfony\Component\Security\Http\Firewall',
@@ -116,6 +121,10 @@ class SecurityExtension extends Extension
 
     private function aclLoad($config, ContainerBuilder $container)
     {
+        if (!interface_exists('Symfony\Component\Security\Acl\Model\AclInterface')) {
+            throw new \LogicException('You must install symfony/security-acl in order to use the ACL functionality.');
+        }
+
         $loader = new XmlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('security_acl.xml');
 
@@ -168,7 +177,7 @@ class SecurityExtension extends Extension
      */
     private function createRoleHierarchy($config, ContainerBuilder $container)
     {
-        if (!isset($config['role_hierarchy'])) {
+        if (!isset($config['role_hierarchy']) || 0 === count($config['role_hierarchy'])) {
             $container->removeDefinition('security.access.role_hierarchy_voter');
 
             return;
@@ -299,7 +308,7 @@ class SecurityExtension extends Extension
             $listener = $container->setDefinition($listenerId, new DefinitionDecorator('security.logout_listener'));
             $listener->replaceArgument(3, array(
                 'csrf_parameter' => $firewall['logout']['csrf_parameter'],
-                'intention' => $firewall['logout']['csrf_token_id'],
+                'csrf_token_id' => $firewall['logout']['csrf_token_id'],
                 'logout_path' => $firewall['logout']['path'],
             ));
             $listeners[] = new Reference($listenerId);

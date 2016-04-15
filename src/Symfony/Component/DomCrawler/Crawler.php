@@ -14,7 +14,7 @@ namespace Symfony\Component\DomCrawler;
 use Symfony\Component\CssSelector\CssSelectorConverter;
 
 /**
- * Crawler eases navigation of a list of \DOMElement objects.
+ * Crawler eases navigation of a list of \DOMNode objects.
  *
  * @author Fabien Potencier <fabien@symfony.com>
  */
@@ -58,8 +58,6 @@ class Crawler implements \Countable, \IteratorAggregate
     private $isHtml = true;
 
     /**
-     * Constructor.
-     *
      * @param mixed  $node       A Node to use as the base for the crawling
      * @param string $currentUri The current URI
      * @param string $baseHref   The base href value
@@ -70,6 +68,16 @@ class Crawler implements \Countable, \IteratorAggregate
         $this->baseHref = $baseHref ?: $currentUri;
 
         $this->add($node);
+    }
+
+    /**
+     * Returns base href.
+     *
+     * @return string
+     */
+    public function getBaseHref()
+    {
+        return $this->baseHref;
     }
 
     /**
@@ -178,34 +186,7 @@ class Crawler implements \Countable, \IteratorAggregate
 
         try {
             // Convert charset to HTML-entities to work around bugs in DOMDocument::loadHTML()
-
-            if (function_exists('mb_convert_encoding')) {
-                $content = mb_convert_encoding($content, 'HTML-ENTITIES', $charset);
-            } elseif (function_exists('iconv')) {
-                $content = preg_replace_callback(
-                    '/[\x80-\xFF]+/',
-                    function ($m) {
-                        $m = unpack('C*', $m[0]);
-                        $i = 1;
-                        $entities = '';
-
-                        while (isset($m[$i])) {
-                            if (0xF0 <= $m[$i]) {
-                                $c = (($m[$i++] - 0xF0) << 18) + (($m[$i++] - 0x80) << 12) + (($m[$i++] - 0x80) << 6) + $m[$i++] - 0x80;
-                            } elseif (0xE0 <= $m[$i]) {
-                                $c = (($m[$i++] - 0xE0) << 12) + (($m[$i++] - 0x80) << 6) + $m[$i++]  - 0x80;
-                            } else {
-                                $c = (($m[$i++] - 0xC0) << 6) + $m[$i++] - 0x80;
-                            }
-
-                            $entities .= '&#'.$c.';';
-                        }
-
-                        return $entities;
-                    },
-                    iconv($charset, 'UTF-8', $content)
-                );
-            }
+            $content = mb_convert_encoding($content, 'HTML-ENTITIES', $charset);
         } catch (\Exception $e) {
         }
 
@@ -247,8 +228,11 @@ class Crawler implements \Countable, \IteratorAggregate
      *
      * @param string $content The XML content
      * @param string $charset The charset
+     * @param int    $options Bitwise OR of the libxml option constants
+     *                        LIBXML_PARSEHUGE is dangerous, see
+     *                        http://symfony.com/blog/security-release-symfony-2-0-17-released
      */
-    public function addXmlContent($content, $charset = 'UTF-8')
+    public function addXmlContent($content, $charset = 'UTF-8', $options = LIBXML_NONET)
     {
         // remove the default namespace if it's the only namespace to make XPath expressions simpler
         if (!preg_match('/xmlns:/', $content)) {
@@ -262,7 +246,7 @@ class Crawler implements \Countable, \IteratorAggregate
         $dom->validateOnParse = true;
 
         if ('' !== trim($content)) {
-            @$dom->loadXML($content, LIBXML_NONET);
+            @$dom->loadXML($content, $options);
         }
 
         libxml_use_internal_errors($internalErrors);
@@ -320,10 +304,6 @@ class Crawler implements \Countable, \IteratorAggregate
     {
         if ($node instanceof \DOMDocument) {
             $node = $node->documentElement;
-        }
-
-        if (!$node instanceof \DOMElement) {
-            throw new \InvalidArgumentException(sprintf('Nodes set in a Crawler must be DOMElement or DOMDocument instances, "%s" given.', get_class($node)));
         }
 
         if (null !== $this->document && $this->document !== $node->ownerDocument) {
@@ -503,7 +483,7 @@ class Crawler implements \Countable, \IteratorAggregate
         $nodes = array();
 
         while ($node = $node->parentNode) {
-            if (1 === $node->nodeType) {
+            if (XML_ELEMENT_NODE === $node->nodeType) {
                 $nodes[] = $node;
             }
         }
@@ -700,6 +680,20 @@ class Crawler implements \Countable, \IteratorAggregate
     }
 
     /**
+     * Selects images by alt value.
+     *
+     * @param string $value The image alt
+     *
+     * @return Crawler A new instance of Crawler with the filtered list of nodes
+     */
+    public function selectImage($value)
+    {
+        $xpath = sprintf('descendant-or-self::img[contains(normalize-space(string(@alt)), %s)]', static::xpathLiteral($value));
+
+        return $this->filterRelativeXPath($xpath);
+    }
+
+    /**
      * Selects a button by name or alt value for images.
      *
      * @param string $value The button text
@@ -723,7 +717,7 @@ class Crawler implements \Countable, \IteratorAggregate
      *
      * @return Link A Link instance
      *
-     * @throws \InvalidArgumentException If the current node list is empty
+     * @throws \InvalidArgumentException If the current node list is empty or the selected node is not instance of DOMElement
      */
     public function link($method = 'get')
     {
@@ -733,6 +727,10 @@ class Crawler implements \Countable, \IteratorAggregate
 
         $node = $this->getNode(0);
 
+        if (!$node instanceof \DOMElement) {
+            throw new \InvalidArgumentException(sprintf('The selected node should be instance of DOMElement, got "%s".', get_class($node)));
+        }
+
         return new Link($node, $this->baseHref, $method);
     }
 
@@ -740,15 +738,62 @@ class Crawler implements \Countable, \IteratorAggregate
      * Returns an array of Link objects for the nodes in the list.
      *
      * @return Link[] An array of Link instances
+     *
+     * @throws \InvalidArgumentException If the current node list contains non-DOMElement instances
      */
     public function links()
     {
         $links = array();
         foreach ($this->nodes as $node) {
+            if (!$node instanceof \DOMElement) {
+                throw new \InvalidArgumentException(sprintf('The current node list should contain only DOMElement instances, "%s" found.', get_class($node)));
+            }
+
             $links[] = new Link($node, $this->baseHref, 'get');
         }
 
         return $links;
+    }
+
+    /**
+     * Returns an Image object for the first node in the list.
+     *
+     * @return Image An Image instance
+     *
+     * @throws \InvalidArgumentException If the current node list is empty
+     */
+    public function image()
+    {
+        if (!count($this)) {
+            throw new \InvalidArgumentException('The current node list is empty.');
+        }
+
+        $node = $this->getNode(0);
+
+        if (!$node instanceof \DOMElement) {
+            throw new \InvalidArgumentException(sprintf('The selected node should be instance of DOMElement, got "%s".', get_class($node)));
+        }
+
+        return new Image($node, $this->baseHref);
+    }
+
+    /**
+     * Returns an array of Image objects for the nodes in the list.
+     *
+     * @return Image[] An array of Image instances
+     */
+    public function images()
+    {
+        $images = array();
+        foreach ($this as $node) {
+            if (!$node instanceof \DOMElement) {
+                throw new \InvalidArgumentException(sprintf('The current node list should contain only DOMElement instances, "%s" found.', get_class($node)));
+            }
+
+            $images[] = new Image($node, $this->baseHref);
+        }
+
+        return $images;
     }
 
     /**
@@ -759,7 +804,7 @@ class Crawler implements \Countable, \IteratorAggregate
      *
      * @return Form A Form instance
      *
-     * @throws \InvalidArgumentException If the current node list is empty
+     * @throws \InvalidArgumentException If the current node list is empty or the selected node is not instance of DOMElement
      */
     public function form(array $values = null, $method = null)
     {
@@ -767,7 +812,13 @@ class Crawler implements \Countable, \IteratorAggregate
             throw new \InvalidArgumentException('The current node list is empty.');
         }
 
-        $form = new Form($this->getNode(0), $this->uri, $method, $this->baseHref);
+        $node = $this->getNode(0);
+
+        if (!$node instanceof \DOMElement) {
+            throw new \InvalidArgumentException(sprintf('The selected node should be instance of DOMElement, got "%s".', get_class($node)));
+        }
+
+        $form = new Form($node, $this->uri, $method, $this->baseHref);
 
         if (null !== $values) {
             $form->setValues($values);
@@ -859,12 +910,7 @@ class Crawler implements \Countable, \IteratorAggregate
 
         foreach ($this->nodes as $node) {
             $domxpath = $this->createDOMXPath($node->ownerDocument, $prefixes);
-
-            foreach ($domxpath->query($xpath, $node) as $subNode) {
-                if ($subNode->nodeType === 1) {
-                    $crawler->add($subNode);
-                }
-            }
+            $crawler->add($domxpath->query($xpath, $node));
         }
 
         return $crawler;

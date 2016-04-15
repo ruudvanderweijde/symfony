@@ -83,7 +83,7 @@ class DateType extends AbstractType
                 $pattern
             );
 
-            // new \intlDateFormatter may return null instead of false in case of failure, see https://bugs.php.net/bug.php?id=66323
+            // new \IntlDateFormatter may return null instead of false in case of failure, see https://bugs.php.net/bug.php?id=66323
             if (!$formatter) {
                 throw new InvalidOptionsException(intl_get_error_message(), intl_get_error_code());
             }
@@ -180,7 +180,7 @@ class DateType extends AbstractType
     public function configureOptions(OptionsResolver $resolver)
     {
         $compound = function (Options $options) {
-            return $options['widget'] !== 'single_text';
+            return 'single_text' !== $options['widget'];
         };
 
         $placeholderDefault = function (Options $options) {
@@ -222,7 +222,7 @@ class DateType extends AbstractType
         };
 
         $format = function (Options $options) {
-            return $options['widget'] === 'single_text' ? DateType::HTML5_FORMAT : DateType::DEFAULT_FORMAT;
+            return 'single_text' === $options['widget'] ? DateType::HTML5_FORMAT : DateType::DEFAULT_FORMAT;
         };
 
         $resolver->setDefaults(array(
@@ -282,14 +282,15 @@ class DateType extends AbstractType
     {
         $pattern = $formatter->getPattern();
         $timezone = $formatter->getTimezoneId();
+        $formattedTimestamps = array();
 
         $formatter->setTimeZone('UTC');
 
         if (preg_match($regex, $pattern, $matches)) {
             $formatter->setPattern($matches[0]);
 
-            foreach ($timestamps as $key => $timestamp) {
-                $timestamps[$key] = $formatter->format($timestamp);
+            foreach ($timestamps as $timestamp => $choice) {
+                $formattedTimestamps[$formatter->format($timestamp)] = $choice;
             }
 
             // I'd like to clone the formatter above, but then we get a
@@ -299,7 +300,7 @@ class DateType extends AbstractType
 
         $formatter->setTimeZone($timezone);
 
-        return $timestamps;
+        return $formattedTimestamps;
     }
 
     private function listYears(array $years)
@@ -308,7 +309,7 @@ class DateType extends AbstractType
 
         foreach ($years as $year) {
             if (false !== $y = gmmktime(0, 0, 0, 6, 15, $year)) {
-                $result[$year] = $y;
+                $result[$y] = $year;
             }
         }
 
@@ -320,7 +321,7 @@ class DateType extends AbstractType
         $result = array();
 
         foreach ($months as $month) {
-            $result[$month] = gmmktime(0, 0, 0, $month, 15);
+            $result[gmmktime(0, 0, 0, $month, 15)] = $month;
         }
 
         return $result;
@@ -331,7 +332,7 @@ class DateType extends AbstractType
         $result = array();
 
         foreach ($days as $day) {
-            $result[$day] = gmmktime(0, 0, 0, 5, $day);
+            $result[gmmktime(0, 0, 0, 5, $day)] = $day;
         }
 
         return $result;

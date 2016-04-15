@@ -13,6 +13,7 @@ namespace Symfony\Component\Routing;
 
 use Symfony\Component\Config\Exception\FileLoaderLoadException;
 use Symfony\Component\Config\Loader\LoaderInterface;
+use Symfony\Component\Config\Resource\ResourceInterface;
 
 /**
  * Helps add and import routes into a RouteCollection.
@@ -35,6 +36,7 @@ class RouteCollectionBuilder
     private $options = array();
     private $schemes;
     private $methods;
+    private $resources = array();
 
     /**
      * @param LoaderInterface $loader
@@ -47,16 +49,17 @@ class RouteCollectionBuilder
     /**
      * Import an external routing resource and returns the RouteCollectionBuilder.
      *
-     *  $routes->mount('/blog', $routes->import('blog.yml'));
+     *  $routes->import('blog.yml', '/blog');
      *
-     * @param mixed  $resource
-     * @param string $type
+     * @param mixed       $resource
+     * @param string|null $prefix
+     * @param string      $type
      *
      * @return RouteCollectionBuilder
      *
      * @throws FileLoaderLoadException
      */
-    public function import($resource, $type = null)
+    public function import($resource, $prefix = '/', $type = null)
     {
         /** @var RouteCollection $collection */
         $collection = $this->load($resource, $type);
@@ -70,6 +73,9 @@ class RouteCollectionBuilder
         foreach ($collection->getResources() as $resource) {
             $builder->addResource($resource);
         }
+
+        // mount into this builder
+        $this->mount($prefix, $builder);
 
         return $builder;
     }
@@ -105,6 +111,7 @@ class RouteCollectionBuilder
     /**
      * Add a RouteCollectionBuilder.
      *
+     * @param string                 $prefix
      * @param RouteCollectionBuilder $builder
      */
     public function mount($prefix, RouteCollectionBuilder $builder)
@@ -238,7 +245,21 @@ class RouteCollectionBuilder
     }
 
     /**
-     * Creates the final ArrayCollection, returns it, and clears everything.
+     * Adds a resource for this collection.
+     *
+     * @param ResourceInterface $resource
+     *
+     * @return $this
+     */
+    private function addResource(ResourceInterface $resource)
+    {
+        $this->resources[] = $resource;
+
+        return $this;
+    }
+
+    /**
+     * Creates the final RouteCollection and returns it.
      *
      * @return RouteCollection
      */
@@ -251,7 +272,6 @@ class RouteCollectionBuilder
                 $route->setDefaults(array_merge($this->defaults, $route->getDefaults()));
                 $route->setOptions(array_merge($this->options, $route->getOptions()));
 
-                // we're extra careful here to avoid re-setting deprecated _method and _scheme
                 foreach ($this->requirements as $key => $val) {
                     if (!$route->hasRequirement($key)) {
                         $route->setRequirement($key, $val);
@@ -290,6 +310,10 @@ class RouteCollectionBuilder
                 $subCollection->addPrefix($this->prefix);
 
                 $routeCollection->addCollection($subCollection);
+            }
+
+            foreach ($this->resources as $resource) {
+                $routeCollection->addResource($resource);
             }
         }
 

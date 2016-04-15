@@ -29,8 +29,6 @@ abstract class AbstractIntlDateFormatterTest extends \PHPUnit_Framework_TestCase
     /**
      * When a time zone is not specified, it uses the system default however it returns null in the getter method.
      *
-     * @covers Symfony\Component\Intl\DateFormatter\IntlDateFormatter::getTimeZoneId
-     *
      * @see StubIntlDateFormatterTest::testDefaultTimeZoneIntl()
      */
     public function testConstructorDefaultTimeZone()
@@ -369,6 +367,10 @@ abstract class AbstractIntlDateFormatterTest extends \PHPUnit_Framework_TestCase
 
     public function testFormatWithIntlTimeZone()
     {
+        if (!extension_loaded('intl')) {
+            $this->markTestSkipped('Extension intl is required.');
+        }
+
         $formatter = $this->getDateFormatter('en', IntlDateFormatter::MEDIUM, IntlDateFormatter::SHORT, \IntlTimeZone::createTimeZone('GMT+03:00'), IntlDateFormatter::GREGORIAN, 'zzzz');
 
         $this->assertEquals('GMT+03:00', $formatter->format(0));
@@ -796,7 +798,6 @@ abstract class AbstractIntlDateFormatterTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @covers Symfony\Component\Intl\DateFormatter\IntlDateFormatter::getTimeZoneId
      * @dataProvider setTimeZoneIdProvider
      */
     public function testSetTimeZoneId($timeZoneId, $expectedTimeZoneId)

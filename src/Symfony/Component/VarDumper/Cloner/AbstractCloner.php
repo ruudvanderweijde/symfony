@@ -28,6 +28,9 @@ abstract class AbstractCloner implements ClonerInterface
         'Symfony\Component\VarDumper\Caster\EnumStub' => 'Symfony\Component\VarDumper\Caster\StubCaster::castEnum',
 
         'Closure' => 'Symfony\Component\VarDumper\Caster\ReflectionCaster::castClosure',
+        'Generator' => 'Symfony\Component\VarDumper\Caster\ReflectionCaster::castGenerator',
+        'ReflectionType' => 'Symfony\Component\VarDumper\Caster\ReflectionCaster::castType',
+        'ReflectionGenerator' => 'Symfony\Component\VarDumper\Caster\ReflectionCaster::castReflectionGenerator',
         'ReflectionClass' => 'Symfony\Component\VarDumper\Caster\ReflectionCaster::castClass',
         'ReflectionFunctionAbstract' => 'Symfony\Component\VarDumper\Caster\ReflectionCaster::castFunctionAbstract',
         'ReflectionMethod' => 'Symfony\Component\VarDumper\Caster\ReflectionCaster::castMethod',
@@ -197,9 +200,6 @@ abstract class AbstractCloner implements ClonerInterface
         $this->filter = $filter;
 
         try {
-            if (!function_exists('iconv')) {
-                $this->maxString = -1;
-            }
             $data = $this->doClone($var);
         } catch (\Exception $e) {
         }
@@ -235,12 +235,13 @@ abstract class AbstractCloner implements ClonerInterface
         $obj = $stub->value;
         $class = $stub->class;
 
+        if (isset($class[15]) && "\0" === $class[15] && 0 === strpos($class, "class@anonymous\x00")) {
+            $stub->class = get_parent_class($class).'@anonymous';
+        }
         if (isset($this->classInfo[$class])) {
             $classInfo = $this->classInfo[$class];
-            $stub->class = $classInfo[0];
         } else {
             $classInfo = array(
-                $class,
                 new \ReflectionClass($class),
                 array_reverse(array($class => $class) + class_parents($class) + class_implements($class) + array('*' => '*')),
             );
@@ -248,9 +249,9 @@ abstract class AbstractCloner implements ClonerInterface
             $this->classInfo[$class] = $classInfo;
         }
 
-        $a = $this->callCaster('Symfony\Component\VarDumper\Caster\Caster::castObject', $obj, $classInfo[1], null, $isNested);
+        $a = $this->callCaster('Symfony\Component\VarDumper\Caster\Caster::castObject', $obj, $classInfo[0], null, $isNested);
 
-        foreach ($classInfo[2] as $p) {
+        foreach ($classInfo[1] as $p) {
             if (!empty($this->casters[$p = strtolower($p)])) {
                 foreach ($this->casters[$p] as $p) {
                     $a = $this->callCaster($p, $obj, $a, $stub, $isNested);

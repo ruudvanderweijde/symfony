@@ -7,6 +7,9 @@
     'subtle_border_and_shadow': 'background: #FFF; border: 1px solid #E0E0E0; box-shadow: 0px 0px 1px rgba(128, 128, 128, .2);'
 } %}
 
+{# when updating any of these colors, do the same in toolbar.css.twig #}
+{% set colors = { 'success': '#4F805D', 'warning': '#A46A1F', 'error': '#B0413E' } %}
+
 {# Normalization
    (normalize.css v3.0.3 | MIT License | github.com/necolas/normalize.css)
    ========================================================================= #}
@@ -113,6 +116,7 @@ button {
 }
 .btn-sm svg {
     height: 16px;
+    width: 16px;
     vertical-align: middle;
 }
 .btn-link {
@@ -232,9 +236,13 @@ table tbody ul {
     padding: 3px 7px;
     white-space: nowrap;
 }
-.label.status-success { background: #5E976E; color: #FFF; }
-.label.status-warning { background: #BC8034; color: #FFF; }
-.label.status-error   { background: #B0413E; color: #FFF; }
+.label.same-width {
+    min-width: 70px;
+    text-align: center;
+}
+.label.status-success { background: {{ colors.success|raw }}; color: #FFF; }
+.label.status-warning { background: {{ colors.warning|raw }}; color: #FFF; }
+.label.status-error   { background: {{ colors.error|raw }}; color: #FFF; }
 
 {# Metrics
    ------------------------------------------------------------------------- #}
@@ -276,8 +284,8 @@ table tbody ul {
 }
 
 .metrics-horizontal .metric {
-    min-height: auto;
-    min-width: auto;
+    min-height: 0;
+    min-width: 0;
 }
 .metrics-horizontal .metric .value,
 .metrics-horizontal .metric .label {
@@ -341,11 +349,11 @@ tr.status-warning td {
     border-top: 1px solid #FAFAFA;
 }
 
-.status-warning .colored  {
-    color: #BC8034;
+.status-warning .colored {
+    color: {{ colors.warning|raw }};
 }
 .status-error .colored  {
-    color: #B0413E;
+    color: {{ colors.error|raw }};
 }
 
 {# Syntax highlighting
@@ -364,6 +372,32 @@ tr.status-warning td {
 .highlight .string    { color: #718C00; }
 .highlight .number    { color: #F5871F; font-weight: bold; }
 .highlight .error     { color: #C82829; }
+
+{# Icons
+   ========================================================================= #}
+.sf-icon {
+    vertical-align: middle;
+    background-repeat: no-repeat;
+    background-size: contain;
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+}
+.sf-icon svg {
+    width: 16px;
+    height: 16px;
+}
+.sf-icon.sf-medium,
+.sf-icon.sf-medium svg {
+    width: 24px;
+    height: 24px;
+}
+.sf-icon.sf-large,
+.sf-icon.sf-large svg {
+    width: 32px;
+    height: 32px;
+}
+
 
 {# Layout
    ========================================================================= #}
@@ -407,6 +441,7 @@ tr.status-warning td {
 }
 #header h1 svg {
     height: 40px;
+    width: 40px;
     margin-top: -4px;
     vertical-align: middle;
 }
@@ -443,16 +478,16 @@ tr.status-warning td {
     text-decoration: underline;
 }
 
-#summary .status-success { background: #5E976E; }
-#summary .status-warning { background: #BC8034; }
-#summary .status-error   { background: #B0413E; }
+#summary .status-success { background: {{ colors.success|raw }}; }
+#summary .status-warning { background: {{ colors.warning|raw }}; }
+#summary .status-error   { background: {{ colors.error|raw }};   }
 
 #summary .status-success h2,
-#summary .status-success h2 a,
+#summary .status-success a,
 #summary .status-warning h2,
-#summary .status-warning h2 a,
+#summary .status-warning a,
 #summary .status-error h2,
-#summary .status-error h2 a {
+#summary .status-error a {
     color: #FFF;
 }
 
@@ -475,6 +510,10 @@ tr.status-warning td {
     margin: 0 1.5em 0 0;
 }
 
+#summary dl.metadata .label {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 {# Sidebar
    ========================================================================= #}
 #sidebar {
@@ -484,7 +523,9 @@ tr.status-warning td {
     margin-bottom: -99999px; {# needed for 'same-height columns' trick #}
     margin-left: -100%;
     padding-bottom: 99999px; {# needed for 'same-height columns' trick #}
+    position: relative;
     width: 220px;
+    z-index: 9999;
 }
 #sidebar .module {
     padding: 10px;
@@ -515,7 +556,7 @@ tr.status-warning td {
     margin-left: 5px;
 }
 #sidebar #sidebar-shortcuts .btn {
-    padding: .5em .6em;
+    padding: .5em;
 }
 
 {# Sidebar Search
@@ -559,6 +600,7 @@ tr.status-warning td {
 #menu-profiler {
     margin: 0;
     padding: 0;
+    list-style-type: none;
 }
 #menu-profiler li {
     position: relative;
@@ -589,6 +631,11 @@ tr.status-warning td {
     top: 8px;
     width: 50px;
     text-align: center;
+}
+#menu-profiler .label .icon img,
+#menu-profiler .label .icon svg {
+    height: 24px;
+    max-width: 24px;
 }
 #menu-profiler li a .label .icon svg path {
     fill: #DDD;
@@ -644,10 +691,10 @@ tr.status-warning td {
 }
 
 #menu-profiler .label-status-warning .count {
-    background: #BC8034;
+    background: {{ colors.warning|raw }};
 }
 #menu-profiler .label-status-error .count {
-    background: #B0413E;
+    background: {{ colors.error|raw }};
 }
 
 {# Timeline panel
@@ -781,6 +828,25 @@ table.logs .metadata {
 table.logs .metadata strong {
     color: #222;
 }
+table.logs .metadata .context {
+    background: #F5F5F5;
+    color: #222;
+}
+table.logs .metadata .context pre {
+    margin: 5px 0;
+    padding: 5px 10px;
+    white-space: pre-wrap;
+}
+
+table.logs .sf-call-stack {
+    margin: 1em 0 1em 1.5em;
+}
+table.logs .sf-call-stack li {
+    margin-bottom: 5px;
+}
+table.logs .sf-call-stack abbr {
+    border: none;
+}
 
 {# Doctrine panel
    ========================================================================= #}
@@ -788,6 +854,11 @@ table.logs .metadata strong {
     background: #F5F5F5;
     margin: .5em 0;
     padding: 1em;
+}
+.queries-table pre {
+    {{ mixins.break_long_words|raw }}
+    margin: 0;
+    white-space: pre-wrap;
 }
 
 {# Dump panel
@@ -847,6 +918,14 @@ table.logs .metadata strong {
 #search-results td {
     {{ mixins.sans_serif_font|raw }}
     vertical-align: middle;
+}
+
+#search-results .sf-search {
+    visibility: hidden;
+    margin-left: 2px;
+}
+#search-results tr:hover .sf-search {
+    visibility: visible;
 }
 
 {# Small screens

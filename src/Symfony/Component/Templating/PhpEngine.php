@@ -330,6 +330,9 @@ class PhpEngine implements EngineInterface, \ArrayAccess
      */
     public function setCharset($charset)
     {
+        if ('UTF8' === $charset = strtoupper($charset)) {
+            $charset = 'UTF-8'; // iconv on Windows requires "UTF-8" instead of "UTF8"
+        }
         $this->charset = $charset;
 
         foreach ($this->helpers as $helper) {
@@ -443,7 +446,7 @@ class PhpEngine implements EngineInterface, \ArrayAccess
                  */
                 function ($value) {
                     if ('UTF-8' != $this->getCharset()) {
-                        $value = $this->convertEncoding($value, 'UTF-8', $this->getCharset());
+                        $value = iconv($this->getCharset(), 'UTF-8', $value);
                     }
 
                     $callback = function ($matches) {
@@ -455,7 +458,7 @@ class PhpEngine implements EngineInterface, \ArrayAccess
                         }
 
                         // \uHHHH
-                        $char = $this->convertEncoding($char, 'UTF-16BE', 'UTF-8');
+                        $char = iconv('UTF-8', 'UTF-16BE', $char);
 
                         return '\\u'.substr('0000'.bin2hex($char), -4);
                     };
@@ -465,7 +468,7 @@ class PhpEngine implements EngineInterface, \ArrayAccess
                     }
 
                     if ('UTF-8' != $this->getCharset()) {
-                        $value = $this->convertEncoding($value, $this->getCharset(), 'UTF-8');
+                        $value = iconv('UTF-8', $this->getCharset(), $value);
                     }
 
                     return $value;
@@ -473,28 +476,6 @@ class PhpEngine implements EngineInterface, \ArrayAccess
         );
 
         self::$escaperCache = array();
-    }
-
-    /**
-     * Convert a string from one encoding to another.
-     *
-     * @param string $string The string to convert
-     * @param string $to     The input encoding
-     * @param string $from   The output encoding
-     *
-     * @return string The string with the new encoding
-     *
-     * @throws \RuntimeException if no suitable encoding function is found (iconv or mbstring)
-     */
-    public function convertEncoding($string, $to, $from)
-    {
-        if (function_exists('mb_convert_encoding')) {
-            return mb_convert_encoding($string, $to, $from);
-        } elseif (function_exists('iconv')) {
-            return iconv($from, $to, $string);
-        }
-
-        throw new \RuntimeException('No suitable convert encoding function (use UTF-8 as your encoding or install the iconv or mbstring extension).');
     }
 
     /**

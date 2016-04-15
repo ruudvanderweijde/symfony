@@ -63,7 +63,7 @@ class TimeType extends AbstractType
                 $hours = $minutes = array();
 
                 foreach ($options['hours'] as $hour) {
-                    $hours[$hour] = str_pad($hour, 2, '0', STR_PAD_LEFT);
+                    $hours[str_pad($hour, 2, '0', STR_PAD_LEFT)] = $hour;
                 }
 
                 // Only pass a subset of the options to children
@@ -73,7 +73,7 @@ class TimeType extends AbstractType
 
                 if ($options['with_minutes']) {
                     foreach ($options['minutes'] as $minute) {
-                        $minutes[$minute] = str_pad($minute, 2, '0', STR_PAD_LEFT);
+                        $minutes[str_pad($minute, 2, '0', STR_PAD_LEFT)] = $minute;
                     }
 
                     $minuteOptions['choices'] = $minutes;
@@ -85,7 +85,7 @@ class TimeType extends AbstractType
                     $seconds = array();
 
                     foreach ($options['seconds'] as $second) {
-                        $seconds[$second] = str_pad($second, 2, '0', STR_PAD_LEFT);
+                        $seconds[str_pad($second, 2, '0', STR_PAD_LEFT)] = $second;
                     }
 
                     $secondOptions['choices'] = $seconds;
@@ -168,7 +168,7 @@ class TimeType extends AbstractType
     public function configureOptions(OptionsResolver $resolver)
     {
         $compound = function (Options $options) {
-            return $options['widget'] !== 'single_text';
+            return 'single_text' !== $options['widget'];
         };
 
         $placeholderDefault = function (Options $options) {

@@ -461,12 +461,27 @@ TABLE
 
 TABLE
             ),
+            'Row with multiple cells' => array(
+                array(),
+                array(
+                    array(
+                        new TableCell('1', array('colspan' => 3)),
+                        new TableCell('2', array('colspan' => 2)),
+                        new TableCell('3', array('colspan' => 2)),
+                        new TableCell('4', array('colspan' => 2)),
+                    ),
+        ),
+                'default',
+<<<TABLE
++--+--+--+--+--+--+--+--+--+
+| 1      | 2   | 3   | 4   |
++--+--+--+--+--+--+--+--+--+
+
+TABLE
+            ),
         );
     }
 
-    /**
-     * @requires extension mbstring
-     */
     public function testRenderMultiByte()
     {
         $table = new Table($output = $this->getOutputStream());
@@ -604,6 +619,69 @@ TABLE;
 | 99921-58-10-7 | Divine Comedy        | Dante Alighieri |   9.95 |
 | 9971-5-0210-0 | A Tale of Two Cities | Charles Dickens | 139.25 |
 +---------------+----------------------+-----------------+--------+
+
+TABLE;
+
+        $this->assertEquals($expected, $this->getOutputContent($output));
+    }
+
+    public function testColumnWith()
+    {
+        $table = new Table($output = $this->getOutputStream());
+        $table
+            ->setHeaders(array('ISBN', 'Title', 'Author', 'Price'))
+            ->setRows(array(
+                array('99921-58-10-7', 'Divine Comedy', 'Dante Alighieri', '9.95'),
+                array('9971-5-0210-0', 'A Tale of Two Cities', 'Charles Dickens', '139.25'),
+            ))
+            ->setColumnWidth(0, 15)
+            ->setColumnWidth(3, 10);
+
+        $style = new TableStyle();
+        $style->setPadType(STR_PAD_LEFT);
+        $table->setColumnStyle(3, $style);
+
+        $table->render();
+
+        $expected =
+            <<<TABLE
++-----------------+----------------------+-----------------+------------+
+| ISBN            | Title                | Author          |      Price |
++-----------------+----------------------+-----------------+------------+
+| 99921-58-10-7   | Divine Comedy        | Dante Alighieri |       9.95 |
+| 9971-5-0210-0   | A Tale of Two Cities | Charles Dickens |     139.25 |
++-----------------+----------------------+-----------------+------------+
+
+TABLE;
+
+        $this->assertEquals($expected, $this->getOutputContent($output));
+    }
+
+    public function testColumnWiths()
+    {
+        $table = new Table($output = $this->getOutputStream());
+        $table
+            ->setHeaders(array('ISBN', 'Title', 'Author', 'Price'))
+            ->setRows(array(
+                array('99921-58-10-7', 'Divine Comedy', 'Dante Alighieri', '9.95'),
+                array('9971-5-0210-0', 'A Tale of Two Cities', 'Charles Dickens', '139.25'),
+            ))
+            ->setColumnWidths(array(15, 0, -1, 10));
+
+        $style = new TableStyle();
+        $style->setPadType(STR_PAD_LEFT);
+        $table->setColumnStyle(3, $style);
+
+        $table->render();
+
+        $expected =
+            <<<TABLE
++-----------------+----------------------+-----------------+------------+
+| ISBN            | Title                | Author          |      Price |
++-----------------+----------------------+-----------------+------------+
+| 99921-58-10-7   | Divine Comedy        | Dante Alighieri |       9.95 |
+| 9971-5-0210-0   | A Tale of Two Cities | Charles Dickens |     139.25 |
++-----------------+----------------------+-----------------+------------+
 
 TABLE;
 

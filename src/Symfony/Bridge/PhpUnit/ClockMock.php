@@ -66,7 +66,7 @@ class ClockMock
             return self::$now;
         }
 
-        return sprintf("%0.6f %d\n", $now - (int) $now, (int) self::$now);
+        return sprintf("%0.6f %d\n", self::$now - (int) self::$now, (int) self::$now);
     }
 
     public static function register($class)
@@ -74,7 +74,7 @@ class ClockMock
         $self = get_called_class();
 
         $mockedNs = array(substr($class, 0, strrpos($class, '\\')));
-        if (strpos($class, '\\Tests\\')) {
+        if (0 < strpos($class, '\\Tests\\')) {
             $ns = str_replace('\\Tests\\', '\\', $class);
             $mockedNs[] = substr($ns, 0, strrpos($ns, '\\'));
         }
@@ -109,5 +109,4 @@ EOPHP
             );
         }
     }
-
 }

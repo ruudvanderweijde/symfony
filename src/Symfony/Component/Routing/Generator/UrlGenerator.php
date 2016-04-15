@@ -76,6 +76,11 @@ class UrlGenerator implements UrlGeneratorInterface, ConfigurableRequirementsInt
     );
 
     /**
+     * @var string This regexp matches all characters that are not or should not be encoded by rawurlencode (see list in array above).
+     */
+    private $urlEncodingSkipRegexp = '#[^-.~a-zA-Z0-9_/@:;,=+!*|]#';
+
+    /**
      * Constructor.
      *
      * @param RouteCollection      $routes  A RouteCollection instance
@@ -153,18 +158,18 @@ class UrlGenerator implements UrlGeneratorInterface, ConfigurableRequirementsInt
 
         $url = '';
         $optional = true;
+        $message = 'Parameter "{parameter}" for route "{route}" must match "{expected}" ("{given}" given) to generate a corresponding URL.';
         foreach ($tokens as $token) {
             if ('variable' === $token[0]) {
                 if (!$optional || !array_key_exists($token[3], $defaults) || null !== $mergedParams[$token[3]] && (string) $mergedParams[$token[3]] !== (string) $defaults[$token[3]]) {
                     // check requirement
                     if (null !== $this->strictRequirements && !preg_match('#^'.$token[2].'$#', $mergedParams[$token[3]])) {
-                        $message = sprintf('Parameter "%s" for route "%s" must match "%s" ("%s" given) to generate a corresponding URL.', $token[3], $name, $token[2], $mergedParams[$token[3]]);
                         if ($this->strictRequirements) {
-                            throw new InvalidParameterException($message);
+                            throw new InvalidParameterException(strtr($message, array('{parameter}' => $token[3], '{route}' => $name, '{expected}' => $token[2], '{given}' => $mergedParams[$token[3]])));
                         }
 
                         if ($this->logger) {
-                            $this->logger->error($message);
+                            $this->logger->error($message, array('parameter' => $token[3], 'route' => $name, 'expected' => $token[2], 'given' => $mergedParams[$token[3]]));
                         }
 
                         return;
@@ -182,19 +187,21 @@ class UrlGenerator implements UrlGeneratorInterface, ConfigurableRequirementsInt
 
         if ('' === $url) {
             $url = '/';
+        } elseif (preg_match($this->urlEncodingSkipRegexp, $url)) {
+            // the context base URL is already encoded (see Symfony\Component\HttpFoundation\Request)
+            $url = strtr(rawurlencode($url), $this->decodedChars);
         }
-
-        // the contexts base URL is already encoded (see Symfony\Component\HttpFoundation\Request)
-        $url = strtr(rawurlencode($url), $this->decodedChars);
 
         // the path segments "." and ".." are interpreted as relative reference when resolving a URI; see http://tools.ietf.org/html/rfc3986#section-3.3
         // so we need to encode them as they are not used for this purpose here
         // otherwise we would generate a URI that, when followed by a user agent (e.g. browser), does not match this route
-        $url = strtr($url, array('/../' => '/%2E%2E/', '/./' => '/%2E/'));
-        if ('/..' === substr($url, -3)) {
-            $url = substr($url, 0, -2).'%2E%2E';
-        } elseif ('/.' === substr($url, -2)) {
-            $url = substr($url, 0, -1).'%2E';
+        if (false !== strpos($url, '/.')) {
+            $url = strtr($url, array('/../' => '/%2E%2E/', '/./' => '/%2E/'));
+            if ('/..' === substr($url, -3)) {
+                $url = substr($url, 0, -2).'%2E%2E';
+            } elseif ('/.' === substr($url, -2)) {
+                $url = substr($url, 0, -1).'%2E';
+            }
         }
 
         $schemeAuthority = '';
@@ -202,16 +209,7 @@ class UrlGenerator implements UrlGeneratorInterface, ConfigurableRequirementsInt
             $scheme = $this->context->getScheme();
 
             if ($requiredSchemes) {
-                $schemeMatched = false;
-                foreach ($requiredSchemes as $requiredScheme) {
-                    if ($scheme === $requiredScheme) {
-                        $schemeMatched = true;
-
-                        break;
-                    }
-                }
-
-                if (!$schemeMatched) {
+                if (!in_array($scheme, $requiredSchemes, true)) {
                     $referenceType = self::ABSOLUTE_URL;
                     $scheme = current($requiredSchemes);
                 }
@@ -222,14 +220,12 @@ class UrlGenerator implements UrlGeneratorInterface, ConfigurableRequirementsInt
                 foreach ($hostTokens as $token) {
                     if ('variable' === $token[0]) {
                         if (null !== $this->strictRequirements && !preg_match('#^'.$token[2].'$#i', $mergedParams[$token[3]])) {
-                            $message = sprintf('Parameter "%s" for route "%s" must match "%s" ("%s" given) to generate a corresponding URL.', $token[3], $name, $token[2], $mergedParams[$token[3]]);
-
                             if ($this->strictRequirements) {
-                                throw new InvalidParameterException($message);
+                                throw new InvalidParameterException(strtr($message, array('{parameter}' => $token[3], '{route}' => $name, '{expected}' => $token[2], '{given}' => $mergedParams[$token[3]])));
                             }
 
                             if ($this->logger) {
-                                $this->logger->error($message);
+                                $this->logger->error($message, array('parameter' => $token[3], 'route' => $name, 'expected' => $token[2], 'given' => $mergedParams[$token[3]]));
                             }
 
                             return;
@@ -273,7 +269,7 @@ class UrlGenerator implements UrlGeneratorInterface, ConfigurableRequirementsInt
         if ($extra && $query = http_build_query($extra, '', '&')) {
             // "/" and "?" can be left decoded for better user experience, see
             // http://tools.ietf.org/html/rfc3986#section-3.4
-            $url .= '?'.strtr($query, array('%2F' => '/'));
+            $url .= '?'.(false === strpos($query, '%2F') ? $query : strtr($query, array('%2F' => '/')));
         }
 
         return $url;

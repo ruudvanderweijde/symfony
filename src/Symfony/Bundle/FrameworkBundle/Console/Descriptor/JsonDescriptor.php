@@ -157,7 +157,7 @@ class JsonDescriptor extends Descriptor
     {
         $key = isset($options['parameter']) ? $options['parameter'] : '';
 
-        $this->writeData(array($key => $this->formatParameter($parameter)), $options);
+        $this->writeData(array($key => $parameter), $options);
     }
 
     /**
@@ -215,6 +215,16 @@ class JsonDescriptor extends Descriptor
         }
 
         $data['abstract'] = $definition->isAbstract();
+
+        if (method_exists($definition, 'isAutowired')) {
+            $data['autowire'] = $definition->isAutowired();
+
+            $data['autowiring_types'] = array();
+            foreach ($definition->getAutowiringTypes() as $autowiringType) {
+                $data['autowiring_types'][] = $autowiringType;
+            }
+        }
+
         $data['file'] = $definition->getFile();
 
         if ($factory = $definition->getFactory()) {
@@ -229,6 +239,14 @@ class JsonDescriptor extends Descriptor
                 $data['factory_method'] = $factory[1];
             } else {
                 $data['factory_function'] = $factory;
+            }
+        }
+
+        $calls = $definition->getMethodCalls();
+        if (count($calls) > 0) {
+            $data['calls'] = array();
+            foreach ($calls as $callData) {
+                $data['calls'][] = $callData[0];
             }
         }
 

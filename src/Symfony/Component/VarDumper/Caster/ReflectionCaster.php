@@ -63,6 +63,59 @@ class ReflectionCaster
         return $a;
     }
 
+    public static function castGenerator(\Generator $c, array $a, Stub $stub, $isNested)
+    {
+        return class_exists('ReflectionGenerator', false) ? self::castReflectionGenerator(new \ReflectionGenerator($c), $a, $stub, $isNested) : $a;
+    }
+
+    public static function castType(\ReflectionType $c, array $a, Stub $stub, $isNested)
+    {
+        $prefix = Caster::PREFIX_VIRTUAL;
+
+        $a += array(
+            $prefix.'type' => $c->__toString(),
+            $prefix.'allowsNull' => $c->allowsNull(),
+            $prefix.'isBuiltin' => $c->isBuiltin(),
+        );
+
+        return $a;
+    }
+
+    public static function castReflectionGenerator(\ReflectionGenerator $c, array $a, Stub $stub, $isNested)
+    {
+        $prefix = Caster::PREFIX_VIRTUAL;
+
+        if ($c->getThis()) {
+            $a[$prefix.'this'] = new CutStub($c->getThis());
+        }
+        $x = $c->getFunction();
+        $frame = array(
+            'class' => isset($x->class) ? $x->class : null,
+            'type' => isset($x->class) ? ($x->isStatic() ? '::' : '->') : null,
+            'function' => $x->name,
+            'file' => $c->getExecutingFile(),
+            'line' => $c->getExecutingLine(),
+        );
+        if ($trace = $c->getTrace(DEBUG_BACKTRACE_IGNORE_ARGS)) {
+            $x = new \ReflectionGenerator($c->getExecutingGenerator());
+            array_unshift($trace, array(
+                'function' => 'yield',
+                'file' => $x->getExecutingFile(),
+                'line' => $x->getExecutingLine() - 1,
+            ));
+            $trace[] = $frame;
+            $a[$prefix.'trace'] = new TraceStub($trace, false, 0, -1, -1);
+        } else {
+            $x = new FrameStub($frame, false, true);
+            $x = ExceptionCaster::castFrameStub($x, array(), $x, true);
+            $a[$prefix.'executing'] = new EnumStub(array(
+                $frame['class'].$frame['type'].$frame['function'].'()' => $x[$prefix.'src'],
+            ));
+        }
+
+        return $a;
+    }
+
     public static function castClass(\ReflectionClass $c, array $a, Stub $stub, $isNested, $filter = 0)
     {
         $prefix = Caster::PREFIX_VIRTUAL;
@@ -103,6 +156,9 @@ class ReflectionCaster
             'this' => 'getClosureThis',
         ));
 
+        if (isset($a[$prefix.'returnType'])) {
+            $a[$prefix.'returnType'] = (string) $a[$prefix.'returnType'];
+        }
         if (isset($a[$prefix.'this'])) {
             $a[$prefix.'this'] = new CutStub($a[$prefix.'this']);
         }
@@ -150,6 +206,9 @@ class ReflectionCaster
     {
         $prefix = Caster::PREFIX_VIRTUAL;
 
+        // Added by HHVM
+        unset($a['info']);
+
         self::addMap($a, $c, array(
             'position' => 'getPosition',
             'isVariadic' => 'isVariadic',
@@ -157,7 +216,11 @@ class ReflectionCaster
         ));
 
         try {
-            if ($c->isArray()) {
+            if (method_exists($c, 'hasType')) {
+                if ($c->hasType()) {
+                    $a[$prefix.'typeHint'] = $c->getType()->__toString();
+                }
+            } elseif ($c->isArray()) {
                 $a[$prefix.'typeHint'] = 'array';
             } elseif (method_exists($c, 'isCallable') && $c->isCallable()) {
                 $a[$prefix.'typeHint'] = 'callable';
@@ -165,6 +228,9 @@ class ReflectionCaster
                 $a[$prefix.'typeHint'] = $v->name;
             }
         } catch (\ReflectionException $e) {
+            if (preg_match('/^Class ([^ ]++) does not exist$/', $e->getMessage(), $m)) {
+                $a[$prefix.'typeHint'] = $m[1];
+            }
         }
 
         try {
@@ -173,6 +239,9 @@ class ReflectionCaster
                 $a[$prefix.'default'] = new ConstStub($c->getDefaultValueConstantName(), $v);
             }
         } catch (\ReflectionException $e) {
+            if (isset($a[$prefix.'typeHint']) && $c->allowsNull()) {
+                $a[$prefix.'default'] = null;
+            }
         }
 
         return $a;

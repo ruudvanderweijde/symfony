@@ -353,7 +353,21 @@ class XmlDescriptor extends Descriptor
             $serviceXML->setAttribute('shared', $definition->isShared() ? 'true' : 'false');
         }
         $serviceXML->setAttribute('abstract', $definition->isAbstract() ? 'true' : 'false');
+
+        if (method_exists($definition, 'isAutowired')) {
+            $serviceXML->setAttribute('autowired', $definition->isAutowired() ? 'true' : 'false');
+        }
+
         $serviceXML->setAttribute('file', $definition->getFile());
+
+        $calls = $definition->getMethodCalls();
+        if (count($calls) > 0) {
+            $serviceXML->appendChild($callsXML = $dom->createElement('calls'));
+            foreach ($calls as $callData) {
+                $callsXML->appendChild($callXML = $dom->createElement('call'));
+                $callXML->setAttribute('method', $callData[0]);
+            }
+        }
 
         if (!$omitTags) {
             $tags = $definition->getTags();

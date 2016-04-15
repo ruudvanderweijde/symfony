@@ -296,7 +296,7 @@ class ProgressBarTest extends \PHPUnit_Framework_TestCase
 
     public function testRedrawFrequency()
     {
-        $bar = $this->getMock('Symfony\Component\Console\Helper\ProgressBar', array('display'), array($output = $this->getOutputStream(), 6));
+        $bar = $this->getMock('Symfony\Component\Console\Helper\ProgressBar', array('display'), array($this->getOutputStream(), 6));
         $bar->expects($this->exactly(4))->method('display');
 
         $bar->setRedrawFrequency(2);
@@ -307,9 +307,26 @@ class ProgressBarTest extends \PHPUnit_Framework_TestCase
         $bar->advance(1);
     }
 
-    /**
-     * @requires extension mbstring
-     */
+    public function testRedrawFrequencyIsAtLeastOneIfZeroGiven()
+    {
+        $bar = $this->getMock('Symfony\Component\Console\Helper\ProgressBar', array('display'), array($this->getOutputStream()));
+
+        $bar->expects($this->exactly(2))->method('display');
+        $bar->setRedrawFrequency(0);
+        $bar->start();
+        $bar->advance();
+    }
+
+    public function testRedrawFrequencyIsAtLeastOneIfSmallerOneGiven()
+    {
+        $bar = $this->getMock('Symfony\Component\Console\Helper\ProgressBar', array('display'), array($this->getOutputStream()));
+
+        $bar->expects($this->exactly(2))->method('display');
+        $bar->setRedrawFrequency(0.9);
+        $bar->start();
+        $bar->advance();
+    }
+
     public function testMultiByteSupport()
     {
         $bar = new ProgressBar($output = $this->getOutputStream());
@@ -541,9 +558,6 @@ class ProgressBarTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    /**
-     * @requires extension mbstring
-     */
     public function testAnsiColorsAndEmojis()
     {
         $bar = new ProgressBar($output = $this->getOutputStream(), 15);
@@ -571,17 +585,17 @@ class ProgressBarTest extends \PHPUnit_Framework_TestCase
             $this->generateOutput(
                 " \033[44;37m Starting the demo... fingers crossed  \033[0m\n".
                 '  0/15 '.$progress.str_repeat($empty, 26)."   0%\n".
-                " \xf0\x9f\x8f\x81  1 sec                          \033[44;37m 0 B \033[0m"
+                " \xf0\x9f\x8f\x81  < 1 sec                        \033[44;37m 0 B \033[0m"
             ).
             $this->generateOutput(
                 " \033[44;37m Looks good to me...                   \033[0m\n".
                 '  4/15 '.str_repeat($done, 7).$progress.str_repeat($empty, 19)."  26%\n".
-                " \xf0\x9f\x8f\x81  1 sec                       \033[41;37m 97 KiB \033[0m"
+                " \xf0\x9f\x8f\x81  < 1 sec                     \033[41;37m 97 KiB \033[0m"
             ).
             $this->generateOutput(
                 " \033[44;37m Thanks, bye                           \033[0m\n".
                 ' 15/15 '.str_repeat($done, 28)." 100%\n".
-                " \xf0\x9f\x8f\x81  1 sec                      \033[41;37m 195 KiB \033[0m"
+                " \xf0\x9f\x8f\x81  < 1 sec                    \033[41;37m 195 KiB \033[0m"
             ),
             stream_get_contents($output->getStream())
         );

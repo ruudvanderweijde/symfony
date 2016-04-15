@@ -11,13 +11,15 @@
 
 namespace Symfony\Component\VarDumper\Tests\Caster;
 
-use Symfony\Component\VarDumper\Test\VarDumperTestCase;
+use Symfony\Component\VarDumper\Test\VarDumperTestTrait;
 
 /**
  * @author Grégoire Pineau <lyrixx@lyrixx.info>
  */
-class SplCasterTest extends VarDumperTestCase
+class SplCasterTest extends \PHPUnit_Framework_TestCase
 {
+    use VarDumperTestTrait;
+
     public function getCastFileInfoTests()
     {
         return array(
@@ -55,12 +57,6 @@ SplFileInfo {
   pathname: "https://google.com/about"
   extension: ""
   realPath: false
-  writable: false
-  readable: false
-  executable: false
-  file: false
-  dir: false
-  link: false
 %A}
 EOTXT
             ),

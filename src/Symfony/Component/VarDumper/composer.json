@@ -16,7 +16,8 @@
         }
     ],
     "require": {
-        "php": ">=5.5.9"
+        "php": ">=5.5.9",
+        "symfony/polyfill-mbstring": "~1.0"
     },
     "require-dev": {
         "twig/twig": "~1.20|~2.0"
@@ -26,12 +27,15 @@
     },
     "autoload": {
         "files": [ "Resources/functions/dump.php" ],
-        "psr-4": { "Symfony\\Component\\VarDumper\\": "" }
+        "psr-4": { "Symfony\\Component\\VarDumper\\": "" },
+        "exclude-from-classmap": [
+            "/Tests/"
+        ]
     },
     "minimum-stability": "dev",
     "extra": {
         "branch-alias": {
-            "dev-master": "3.0-dev"
+            "dev-master": "3.1-dev"
         }
     }
 }

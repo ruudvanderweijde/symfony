@@ -101,6 +101,7 @@ abstract class AbstractDescriptorTest extends \PHPUnit_Framework_TestCase
         $data = $this->getDescriptionTestData(ObjectsProvider::getContainerParameter());
 
         $data[0][] = array('parameter' => 'database_name');
+        $data[1][] = array('parameter' => 'twig.form.resources');
 
         return $data;
     }
@@ -144,7 +145,7 @@ abstract class AbstractDescriptorTest extends \PHPUnit_Framework_TestCase
         if ('json' === $this->getFormat()) {
             $this->assertEquals(json_decode($expectedDescription), json_decode($output->fetch()));
         } else {
-            $this->assertEquals($expectedDescription, $output->fetch());
+            $this->assertEquals(trim($expectedDescription), trim(str_replace(PHP_EOL, "\n", $output->fetch())));
         }
     }
 

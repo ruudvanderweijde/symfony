@@ -11,10 +11,13 @@
 
 namespace Symfony\Component\Validator\Tests\Constraints;
 
+use Symfony\Bridge\PhpUnit\DnsMock;
 use Symfony\Component\Validator\Constraints\Url;
 use Symfony\Component\Validator\Constraints\UrlValidator;
-use Symfony\Component\Validator\Validation;
 
+/**
+ * @group dns-sensitive
+ */
 class UrlValidatorTest extends AbstractConstraintValidatorTest
 {
     protected function createValidator()
@@ -112,6 +115,12 @@ class UrlValidatorTest extends AbstractConstraintValidatorTest
             array('http://☎.com/'),
             array('http://username:password@symfony.com'),
             array('http://user-name@symfony.com'),
+            array('http://symfony.com?'),
+            array('http://symfony.com?query=1'),
+            array('http://symfony.com/?query=1'),
+            array('http://symfony.com#'),
+            array('http://symfony.com#fragment'),
+            array('http://symfony.com/#fragment'),
         );
     }
 
@@ -142,8 +151,6 @@ class UrlValidatorTest extends AbstractConstraintValidatorTest
             array('http://goog_le.com'),
             array('http://google.com::aa'),
             array('http://google.com:aa'),
-            array('http://symfony.com?'),
-            array('http://symfony.com#'),
             array('ftp://google.fr'),
             array('faked://google.fr'),
             array('http://127.0.0.1:aa/'),
@@ -178,6 +185,36 @@ class UrlValidatorTest extends AbstractConstraintValidatorTest
             array('file://127.0.0.1'),
             array('git://[::1]/'),
         );
+    }
+
+    /**
+     * @dataProvider getCheckDns
+     * @requires function Symfony\Bridge\PhpUnit\DnsMock::withMockedHosts
+     */
+    public function testCheckDns($violation)
+    {
+        DnsMock::withMockedHosts(array('example.com' => array(array('type' => $violation ? '' : 'A'))));
+
+        $constraint = new Url(array(
+            'checkDNS' => true,
+            'dnsMessage' => 'myMessage',
+        ));
+
+        $this->validator->validate('http://example.com', $constraint);
+
+        if (!$violation) {
+            $this->assertNoViolation();
+        } else {
+            $this->buildViolation('myMessage')
+                ->setParameter('{{ value }}', '"example.com"')
+                ->setCode(Url::INVALID_URL_ERROR)
+                ->assertRaised();
+        }
+    }
+
+    public function getCheckDns()
+    {
+        return array(array(true), array(false));
     }
 }
 

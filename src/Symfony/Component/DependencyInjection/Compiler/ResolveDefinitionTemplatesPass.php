@@ -96,11 +96,11 @@ class ResolveDefinitionTemplatesPass implements CompilerPassInterface
      */
     private function resolveDefinition(ContainerBuilder $container, DefinitionDecorator $definition)
     {
-        if (!$container->hasDefinition($parent = $definition->getParent())) {
+        if (!$container->has($parent = $definition->getParent())) {
             throw new RuntimeException(sprintf('The parent definition "%s" defined for definition "%s" does not exist.', $parent, $this->currentId));
         }
 
-        $parentDef = $container->getDefinition($parent);
+        $parentDef = $container->findDefinition($parent);
         if ($parentDef instanceof DefinitionDecorator) {
             $id = $this->currentId;
             $this->currentId = $parent;
@@ -118,6 +118,7 @@ class ResolveDefinitionTemplatesPass implements CompilerPassInterface
         $def->setArguments($parentDef->getArguments());
         $def->setMethodCalls($parentDef->getMethodCalls());
         $def->setProperties($parentDef->getProperties());
+        $def->setAutowiringTypes($parentDef->getAutowiringTypes());
         if ($parentDef->isDeprecated()) {
             $def->setDeprecated(true, $parentDef->getDeprecationMessage('%service_id%'));
         }
@@ -184,8 +185,14 @@ class ResolveDefinitionTemplatesPass implements CompilerPassInterface
             $def->setMethodCalls(array_merge($def->getMethodCalls(), $calls));
         }
 
+        // merge autowiring types
+        foreach ($definition->getAutowiringTypes() as $autowiringType) {
+            $def->addAutowiringType($autowiringType);
+        }
+
         // these attributes are always taken from the child
         $def->setAbstract($definition->isAbstract());
+        $def->setShared($definition->isShared());
         $def->setTags($definition->getTags());
 
         return $def;

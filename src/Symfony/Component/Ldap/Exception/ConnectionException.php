@@ -16,6 +16,6 @@ namespace Symfony\Component\Ldap\Exception;
  *
  * @author Grégoire Pineau <lyrixx@lyrixx.info>
  */
-class ConnectionException extends \RuntimeException
+class ConnectionException extends \RuntimeException implements ExceptionInterface
 {
 }

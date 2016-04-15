@@ -275,6 +275,15 @@ class TextDescriptor extends Descriptor
         }
         $tableRows[] = array('Tags', $tagInformation);
 
+        $calls = $definition->getMethodCalls();
+        if (count($calls) > 0) {
+            $callInformation = [];
+            foreach ($calls as $call) {
+                $callInformation[] = $call[0];
+            }
+            $tableRows[] = array('Calls', implode(', ', $callInformation));
+        }
+
         $tableRows[] = array('Public', $definition->isPublic() ? 'yes' : 'no');
         $tableRows[] = array('Synthetic', $definition->isSynthetic() ? 'yes' : 'no');
         $tableRows[] = array('Lazy', $definition->isLazy() ? 'yes' : 'no');
@@ -282,6 +291,19 @@ class TextDescriptor extends Descriptor
             $tableRows[] = array('Shared', $definition->isShared() ? 'yes' : 'no');
         }
         $tableRows[] = array('Abstract', $definition->isAbstract() ? 'yes' : 'no');
+
+        if (method_exists($definition, 'isAutowired')) {
+            $tableRows[] = array('Autowired', $definition->isAutowired() ? 'yes' : 'no');
+
+            $autowiringTypes = $definition->getAutowiringTypes();
+            if (count($autowiringTypes)) {
+                $autowiringTypesInformation = implode(', ', $autowiringTypes);
+            } else {
+                $autowiringTypesInformation = '-';
+            }
+
+            $tableRows[] = array('Autowiring Types', $autowiringTypesInformation);
+        }
 
         if ($definition->getFile()) {
             $tableRows[] = array('Required File', $definition->getFile() ? $definition->getFile() : '-');
@@ -364,7 +386,7 @@ class TextDescriptor extends Descriptor
     /**
      * @param array $array
      */
-    private function renderEventListenerTable(EventDispatcherInterface $eventDispatcher, $event, array $eventListeners, SymfonyStyle $renderer)
+    private function renderEventListenerTable(EventDispatcherInterface $eventDispatcher, $event, array $eventListeners, SymfonyStyle $io)
     {
         $tableHeaders = array('Order', 'Callable', 'Priority');
         $tableRows = array();
@@ -374,7 +396,7 @@ class TextDescriptor extends Descriptor
             $tableRows[] = array(sprintf('#%d', $order + 1), $this->formatCallable($listener), $eventDispatcher->getListenerPriority($event, $listener));
         }
 
-        $renderer->table($tableHeaders, $tableRows);
+        $io->table($tableHeaders, $tableRows);
     }
 
     /**
@@ -396,17 +418,6 @@ class TextDescriptor extends Descriptor
         }
 
         return trim($configAsString);
-    }
-
-    /**
-     * @param string $section
-     * @param string $message
-     *
-     * @return string
-     */
-    private function formatSection($section, $message)
-    {
-        return sprintf('<info>[%s]</info> %s', $section, $message);
     }
 
     /**
